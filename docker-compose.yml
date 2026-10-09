@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mfg
+      POSTGRES_PASSWORD: mfg_password
+      POSTGRES_DB: manufacturing
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mfg -d manufacturing"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://mfg:mfg_password@db:5432/manufacturing
+      AUTO_CREATE_TABLES: "false"      # schema is managed by Alembic
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Optional: Redis for a shared rate limiter / future background jobs
+  # redis:
+  #   image: redis:7-alpine
+
+volumes:
+  pgdata:
